@@ -1,0 +1,9 @@
+schema_version: "1.0"
+package_name: "@scenara/repository-contracts"
+current_release: "1.0.0"
+compatibility:
+  patch: documentation_only
+  minor: backward_compatible
+  major: incompatible
+published_directories_immutable: true
+digest_algorithm: sha256
