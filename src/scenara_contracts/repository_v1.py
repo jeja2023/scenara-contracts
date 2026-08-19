@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from datetime import datetime
 from enum import StrEnum
 from typing import Any, Literal
 
@@ -8,10 +9,24 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 SHA256 = r"^[0-9a-f]{64}$"
 IMMUTABLE_URI = r"^.+(?:@sha256:|#sha256=)[0-9a-f]{64}$"
+RFC3339_UTC = r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?Z$"
 
 
 class ContractModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
+
+
+def _validate_utc_rfc3339(value: str) -> str:
+    normalized = value.strip()
+    if re.fullmatch(RFC3339_UTC, normalized) is None:
+        raise ValueError("时间必须是 UTC RFC 3339 字符串，并以 Z 结尾")
+    try:
+        parsed = datetime.fromisoformat(normalized[:-1] + "+00:00")
+    except ValueError as exc:
+        raise ValueError("时间不是有效的 UTC RFC 3339 值") from exc
+    if parsed.tzinfo is None:
+        raise ValueError("时间必须包含 UTC 时区")
+    return normalized
 
 
 class FeedbackKind(StrEnum):
@@ -84,7 +99,12 @@ class DatasetVersionReference(ContractModel):
     lineage_refs: tuple[str, ...] = Field(min_length=1, max_length=100)
     authorization_id: str = Field(min_length=1, max_length=256)
     authorized_consumer_repository_ids: tuple[str, ...] = Field(min_length=1, max_length=32)
-    created_at: float
+    created_at: str = Field(pattern=RFC3339_UTC)
+
+    @field_validator("created_at")
+    @classmethod
+    def utc_created_at(cls, value: str) -> str:
+        return _validate_utc_rfc3339(value)
 
     @field_validator("lineage_refs")
     @classmethod
@@ -128,7 +148,12 @@ class HardSampleManifest(ContractModel):
     items: tuple[HardSampleItem, ...]
     sha256: str = Field(pattern=SHA256)
     created_by: str
-    created_at: float
+    created_at: str = Field(pattern=RFC3339_UTC)
+
+    @field_validator("created_at")
+    @classmethod
+    def utc_created_at(cls, value: str) -> str:
+        return _validate_utc_rfc3339(value)
 
 
 class ModelDeploymentEvent(ContractModel):
@@ -147,7 +172,12 @@ class ModelDeploymentEvent(ContractModel):
     reason: str
     operator_id: str
     audit_id: str
-    created_at: float
+    created_at: str = Field(pattern=RFC3339_UTC)
+
+    @field_validator("created_at")
+    @classmethod
+    def utc_created_at(cls, value: str) -> str:
+        return _validate_utc_rfc3339(value)
 
 
 __all__ = [
