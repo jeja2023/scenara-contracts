@@ -15,7 +15,7 @@ from scenara_contracts.repository_v1 import (
 )
 
 ROOT = Path(__file__).resolve().parents[1]
-CONTRACT_ROOT = ROOT / "contracts" / "repository" / "v1.0.0"
+CONTRACT_ROOT = ROOT / "contracts" / "repository" / "v1.0.1"
 
 MODELS = {
     "dataset-version-input": DatasetVersionReference,
@@ -36,7 +36,7 @@ def test_published_examples_match_schema_and_python_types() -> None:
 def test_release_catalog_names_all_published_contracts() -> None:
     manifest = json.loads((CONTRACT_ROOT / "manifest.json").read_text(encoding="utf-8"))
     assert manifest["package_name"] == "@scenara/repository-contracts"
-    assert manifest["release_version"] == "1.0.0"
+    assert manifest["release_version"] == "1.0.1"
     assert {item["contract_id"] for item in manifest["contracts"]} == set(MODELS)
 
 

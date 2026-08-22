@@ -26,7 +26,7 @@ from scenara_contracts.repository_v1 import (  # noqa: E402
     ModelReleaseStatus,
 )
 
-CONTRACT_RELEASE_VERSION = "1.0.0"
+CONTRACT_RELEASE_VERSION = "1.0.1"
 
 CONTRACT_DIR = ROOT / "contracts" / "repository" / f"v{CONTRACT_RELEASE_VERSION}"
 RELEASE_INDEX = ROOT / "contracts" / "repository" / "release-index.json"

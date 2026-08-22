@@ -1,6 +1,6 @@
 # Scenara cross-repository contracts
 
-The published contract package is `@scenara/repository-contracts` version `1.0.0`. It contains one Draft 2020-12 JSON Schema and one valid example for each cross-repository payload, plus a checksummed manifest.
+The published contract package is `@scenara/repository-contracts` version `1.0.1`. It contains one Draft 2020-12 JSON Schema and one valid example for each cross-repository payload, plus a checksummed manifest.
 
 ## Contracts
 
@@ -49,7 +49,7 @@ Build the deterministic release bundle used by CI:
 ```bash
 python scripts/repository_contracts.py \
   --check \
-  --bundle repository-contracts-1.0.0.zip
+  --bundle repository-contracts-1.0.1.zip
 ```
 
 ## Consumer compatibility
