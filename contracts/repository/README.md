@@ -1,26 +1,22 @@
-# Scenara cross-repository contracts
+# Scenara 跨仓库契约
 
-The current published contract package is `@scenara/repository-contracts` version `1.2.0`. It contains one Draft 2020-12 JSON Schema and one valid example for each cross-repository payload, plus a checksummed manifest.
+当前已发布的契约包为 `@scenara/repository-contracts` 版本 `1.2.0`。该包为每项跨仓库载荷提供一份 Draft 2020-12 JSON Schema 及一份有效示例，并附带已计算 SHA-256 校验和的清单（manifest）。
 
-## Contracts
+## 契约列表
 
-| Contract | Producer | Consumer | Transport |
+| 契约 | 生产方 | 消费方 | 传输方式 |
 |---|---|---|---|
-| `model-package-admission` | `scenara-model` | `scenara` | immutable manifest |
-| `deployment-feedback` | `scenara` | `scenara-model` | event / signed webhook |
-| `hard-sample-handoff` | `scenara` | `scenara-data` | immutable manifest |
-| `dataset-version-input` | `scenara-data` | `scenara-model` | versioned API |
-| `domain-annotation-schema` | `scenara-contracts` | `scenara-data` | immutable manifest |
+| `model-package-admission` | `scenara-model` | `scenara` | 不可变清单 |
+| `deployment-feedback` | `scenara` | `scenara-model` | 事件 / 签名 Webhook |
+| `hard-sample-handoff` | `scenara` | `scenara-data` | 不可变清单 |
+| `dataset-version-input` | `scenara-data` | `scenara-model` | 版本化 API |
+| `domain-annotation-schema` | `scenara-contracts` | `scenara-data` | 不可变清单 |
 
-`release-index.json` locks every published manifest by SHA-256. A published directory is immutable; incompatible changes require a new major release, while backward-compatible additions require a new minor release.
+`release-index.json` 通过 SHA-256 锁定每个已发布清单。已发布目录严格不可变；不兼容变更必须发布新的主版本，向后兼容的增量变更发布新的次版本。
 
-## Time fields
+## 时间字段规范
 
-The `created_at` field in `hard-sample-handoff`, `dataset-version-input`, and
-`deployment-feedback` is a UTC RFC3339 string. It must end with `Z`; an optional
-fractional second may contain one to six digits. Internal database timestamps
-may use native datetime values, but cross-repository payloads must preserve the
-UTC string form and must not expose Unix numeric timestamps.
+`hard-sample-handoff`、`dataset-version-input` 与 `deployment-feedback` 中的 `created_at` 字段为 UTC RFC 3339 字符串。该字符串必须以 `Z` 结尾；可选的秒小数部分可包含 1 至 6 位数字。内部数据库时间戳可以使用原生日期时间类型，但跨仓库载荷必须保留 UTC 字符串形式，严禁暴露 Unix 数值时间戳。
 
 ```json
 {
@@ -28,15 +24,15 @@ UTC string form and must not expose Unix numeric timestamps.
 }
 ```
 
-## Provider verification
+## 生产方验证
 
-Generate and verify the committed package:
+生成并校验当前提交的契约包：
 
 ```bash
 python scripts/repository_contracts.py --check
 ```
 
-Validate a producer document before publishing it:
+在发布前校验生产方文档：
 
 ```bash
 python scripts/repository_contracts.py \
@@ -45,7 +41,7 @@ python scripts/repository_contracts.py \
   --verify-document model-package.json
 ```
 
-Build the deterministic release bundle used by CI:
+构建 CI 使用的确定性发布包（Bundle）：
 
 ```bash
 python scripts/repository_contracts.py \
@@ -53,9 +49,9 @@ python scripts/repository_contracts.py \
   --bundle repository-contracts-1.2.0.zip
 ```
 
-## Consumer compatibility
+## 消费方兼容性
 
-When preparing a later contract release, run the candidate against the last published directory:
+在准备后续契约发布时，需针对上一已发布目录运行候选版本兼容性检查：
 
 ```bash
 python scripts/repository_contracts.py \
@@ -64,6 +60,6 @@ python scripts/repository_contracts.py \
   --check
 ```
 
-The compatibility gate resolves local schema references and rejects new required properties, removed properties, enum or union narrowing, type narrowing, newly tightened string/number/array limits, and closed additional properties. Consumer repositories should also validate their own captured payload fixtures against the published schemas.
+兼容性门禁会自动解析本地 Schema 引用，并严格拒绝新增必填属性、删除已有属性、枚举或联合类型收窄、数据类型收窄、新增收紧的字符串/数值/数组限制以及关闭附加属性（`additionalProperties`）。消费方仓库亦应使用其捕获的真实载荷测试夹具针对已发布 Schema 进行验证。
 
-`--verify-document` runs both Draft 2020-12 validation and the canonical semantic validator. The semantic pass verifies cross-field digest equality for model packages and dataset references and recomputes the canonical hard-sample manifest checksum.
+`--verify-document` 会同时执行 Draft 2020-12 规范验证与规范语义校验器。语义校验会验证模型包与数据集引用的跨字段摘要一致性，并重新计算标准难例清单的校验和。

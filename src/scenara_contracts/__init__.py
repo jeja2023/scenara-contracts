@@ -1,4 +1,4 @@
-"""Published Scenara cross-repository contracts."""
+"""已发布的 Scenara 跨仓库契约。"""
 
 from scenara_contracts.repository_v1 import (
     DatasetVersionReference,

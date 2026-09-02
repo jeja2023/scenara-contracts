@@ -388,12 +388,12 @@ def validate_contract_document(contract_id: str, document: dict[str, Any]) -> Ba
         None,
     )
     if definition is None:
-        raise SystemExit(f"unknown repository contract: {contract_id}")
+        raise SystemExit(f"未知跨仓库契约：{contract_id}")
     model = definition["model"]
     assert isinstance(model, type) and issubclass(model, BaseModel)
     validated = model.model_validate(document)
     if contract_id == "hard-sample-handoff" and document.get("sha256") != hard_sample_digest(document):
-        raise SystemExit("hard-sample-handoff payload checksum does not match its canonical content")
+        raise SystemExit("hard-sample-handoff 载荷校验和与其规范内容不匹配")
     return validated
 
 
@@ -409,7 +409,7 @@ def verify_compatibility(previous_dir: Path, candidate_files: dict[str, bytes]) 
         candidate = json.loads(document)
         errors.extend(f"{name}: {item}" for item in compatibility_errors(previous, candidate))
     if errors:
-        raise SystemExit("repository contract compatibility failed:\n" + "\n".join(errors))
+        raise SystemExit("跨仓库契约兼容性校验未通过：\n" + "\n".join(errors))
 
 
 def write_files(output_dir: Path, files: dict[str, bytes]) -> None:
@@ -426,8 +426,8 @@ def check_files(output_dir: Path, files: dict[str, bytes]) -> None:
     ]
     unexpected = sorted(path.name for path in output_dir.glob("*.json") if path.name not in files)
     if drift or unexpected:
-        details = [*(f"drifted: {name}" for name in drift), *(f"unexpected: {name}" for name in unexpected)]
-        raise SystemExit("repository contracts drifted; run scripts/repository_contracts.py\n" + "\n".join(details))
+        details = [*(f"发生漂移: {name}" for name in drift), *(f"未预期文件: {name}" for name in unexpected)]
+        raise SystemExit("跨仓库契约发生漂移；请重新运行 scripts/repository_contracts.py\n" + "\n".join(details))
 
 
 def check_release_index(output_dir: Path) -> None:
@@ -438,10 +438,10 @@ def check_release_index(output_dir: Path) -> None:
         None,
     )
     if release is None or release.get("status") != "published":
-        raise SystemExit(f"repository contract release {CONTRACT_RELEASE_VERSION} is not published")
+        raise SystemExit(f"跨仓库契约发布版本 {CONTRACT_RELEASE_VERSION} 未处于已发布状态")
     manifest = output_dir / "manifest.json"
     if release.get("manifest_sha256") != sha256(manifest.read_bytes()):
-        raise SystemExit("published repository contract release is immutable; publish a new semantic version")
+        raise SystemExit("已发布的跨仓库契约版本不可变；请发布新的语义化版本")
 
 
 def build_bundle(output: Path, source_dir: Path) -> None:
@@ -455,21 +455,21 @@ def build_bundle(output: Path, source_dir: Path) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Generate, validate, and package cross-repository contracts")
-    parser.add_argument("--output-dir", type=Path, default=CONTRACT_DIR)
-    parser.add_argument("--check", action="store_true")
-    parser.add_argument("--against", type=Path)
-    parser.add_argument("--bundle", type=Path)
-    parser.add_argument("--verify-contract")
-    parser.add_argument("--verify-document", type=Path)
+    parser = argparse.ArgumentParser(description="生成、校验并打包跨仓库契约")
+    parser.add_argument("--output-dir", type=Path, default=CONTRACT_DIR, help="契约输出目录")
+    parser.add_argument("--check", action="store_true", help="校验契约文件与发布索引是否发生漂移")
+    parser.add_argument("--against", type=Path, help="对比上一已发布版本进行向后兼容性检查")
+    parser.add_argument("--bundle", type=Path, help="打包确定性发布 ZIP 文件路径")
+    parser.add_argument("--verify-contract", help="待校验契约名称")
+    parser.add_argument("--verify-document", type=Path, help="待校验实例文件路径")
     args = parser.parse_args()
     files = rendered_files()
     if args.verify_contract or args.verify_document:
         if not args.verify_contract or args.verify_document is None:
-            raise SystemExit("--verify-contract and --verify-document must be used together")
+            raise SystemExit("--verify-contract 与 --verify-document 必须配合使用")
         schema_name = f"{args.verify_contract}.schema.json"
         if schema_name not in files:
-            raise SystemExit(f"unknown repository contract: {args.verify_contract}")
+            raise SystemExit(f"未知跨仓库契约：{args.verify_contract}")
         document = json.loads(args.verify_document.read_bytes())
         Draft202012Validator(json.loads(files[schema_name])).validate(document)
         validate_contract_document(args.verify_contract, document)

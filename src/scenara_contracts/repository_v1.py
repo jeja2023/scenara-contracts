@@ -61,10 +61,10 @@ class ModelArtifactFile(ContractModel):
     @classmethod
     def portable_relative_path(cls, value: str) -> str:
         if "\\" in value:
-            raise ValueError("model artifact paths must use forward slashes")
+            raise ValueError("模型制品文件路径必须使用正斜杠")
         path = PurePosixPath(value)
         if path.is_absolute() or not path.parts or any(part in {"", ".", ".."} for part in path.parts):
-            raise ValueError("model artifact paths must stay inside the package")
+            raise ValueError("模型制品文件路径必须位于包内")
         return path.as_posix()
 
 
@@ -94,7 +94,7 @@ class ModelPackageManifest(ContractModel):
     def immutable_reference(cls, value: str) -> str:
         normalized = value.strip()
         if re.search(r"(?:@sha256:|#sha256=)[0-9a-f]{64}$", normalized) is None:
-            raise ValueError("model package references must end with an immutable SHA-256 digest")
+            raise ValueError("模型包引用必须以不可变的 SHA-256 摘要结尾")
         return normalized
 
     @field_validator("evaluation_evidence")
@@ -102,24 +102,24 @@ class ModelPackageManifest(ContractModel):
     def immutable_evidence(cls, value: tuple[str, ...]) -> tuple[str, ...]:
         normalized = tuple(item.strip() for item in value)
         if len(set(normalized)) != len(normalized):
-            raise ValueError("model evaluation evidence references must be unique")
+            raise ValueError("模型评估证据引用必须唯一")
         if any(
             not item or len(item) > 2048 or re.search(r"(?:@sha256:|#sha256=)[0-9a-f]{64}$", item) is None
             for item in normalized
         ):
-            raise ValueError("model evaluation evidence must use immutable SHA-256 references")
+            raise ValueError("模型评估证据必须使用不可变的 SHA-256 引用")
         return normalized
 
     @model_validator(mode="after")
     def artifact_digest_matches(self) -> ModelPackageManifest:
         match = re.search(r"(?:@sha256:|#sha256=)([0-9a-f]{64})$", self.source_uri)
         if match is None or match.group(1) != self.sha256:
-            raise ValueError("model artifact reference digest must match sha256")
+            raise ValueError("模型制品引用摘要必须与 sha256 匹配")
         paths = [item.path for item in self.artifact_files]
         if len(paths) != len(set(paths)):
-            raise ValueError("model artifact file paths must be unique")
+            raise ValueError("模型制品文件路径必须唯一")
         if self.artifact_format == "bundle" and not self.artifact_files:
-            raise ValueError("bundle model packages must enumerate artifact_files")
+            raise ValueError("bundle 格式模型包必须枚举 artifact_files")
         return self
 
 
@@ -147,15 +147,15 @@ class DatasetVersionReference(ContractModel):
         if len(set(value)) != len(value) or any(
             len(item) > 2048 or re.fullmatch(IMMUTABLE_URI, item) is None for item in value
         ):
-            raise ValueError("dataset lineage references must be unique immutable references")
+            raise ValueError("数据集血缘引用必须为唯一的不可变引用")
         return value
 
     @model_validator(mode="after")
     def matching_manifest_digest(self) -> DatasetVersionReference:
         if not self.manifest_uri.endswith((f"@sha256:{self.manifest_sha256}", f"#sha256={self.manifest_sha256}")):
-            raise ValueError("dataset manifest URI digest must match manifest_sha256")
+            raise ValueError("数据集清单 URI 摘要必须与 manifest_sha256 匹配")
         if len(self.annotation_schema_ids) != len(set(self.annotation_schema_ids)):
-            raise ValueError("annotation schema identifiers must be unique")
+            raise ValueError("标注模式标识符必须唯一")
         return self
 
 
@@ -233,11 +233,11 @@ class DomainAnnotationSchema(ContractModel):
     @model_validator(mode="after")
     def validate_definition(self) -> DomainAnnotationSchema:
         if len(self.supported_media_kinds) != len(set(self.supported_media_kinds)):
-            raise ValueError("supported media kinds must be unique")
+            raise ValueError("支持的媒体类型必须唯一")
         if len(self.quality_rules) != len(set(self.quality_rules)):
-            raise ValueError("quality rules must be unique")
+            raise ValueError("质量规则必须唯一")
         if self.payload_schema.get("type") != "object":
-            raise ValueError("annotation payload schema root must be an object")
+            raise ValueError("标注载荷模式根节点必须为对象")
         return self
 
 

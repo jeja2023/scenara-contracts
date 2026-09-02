@@ -250,8 +250,8 @@ def rendered_files() -> dict[str, bytes]:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Generate immutable domain annotation schema instances")
-    parser.add_argument("--check", action="store_true")
+    parser = argparse.ArgumentParser(description="生成不可变领域标注模式实例")
+    parser.add_argument("--check", action="store_true", help="校验模式文件是否发生漂移")
     args = parser.parse_args()
     files = rendered_files()
     if args.check:
@@ -261,7 +261,7 @@ def main() -> None:
             if not (OUTPUT_DIR / name).is_file() or (OUTPUT_DIR / name).read_bytes() != content
         ]
         if drifted:
-            raise SystemExit("domain annotation schemas drifted: " + ", ".join(drifted))
+            raise SystemExit("领域标注模式发生漂移：" + ", ".join(drifted))
         return
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     for name, content in files.items():
