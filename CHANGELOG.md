@@ -2,6 +2,33 @@
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-09-02
+
+### Added
+- 发布兼容增量仓库契约 `@scenara/repository-contracts` `v1.2.0`，包含 `model-package-admission`、`deployment-feedback`、`hard-sample-handoff`、`dataset-version-input` 和 `domain-annotation-schema` 五项跨仓库核心契约。
+- 发布领域标注模式 `scenara.portrait.surveillance-review.v1`，供布控误报复核的授权、脱敏难例进入 Data 和 Model 边界。
+- 新增领域标注模式不可变清单 `contracts/domain-annotations/v1.1.0/`，涵盖 OCR、Behavior、Fashion、Portrait 及通用纠错。
+- 扩充能力词典与实体词典：登记 OCR 文字检测/识别、版面分析、表格识别、多语言识别、动作识别、时序分割、异常检测、Cosplay 角色识别、服装风格/配饰识别等能力及相关实体。
+- 增补错误码与事件目录：登记领域标注、多制品清单校验、评估证据及领域模型资格相关错误码与生命周期事件。
+
+### Changed & Optimized
+- 跨仓库载荷能力升级：
+  - `ModelPackageManifest`：支持 `onnx`、`paddle`、`pytorch` 及 `bundle` 多制品模式，引入 `artifact_files` 逐文件 SHA-256 清单及路径唯一性校验，支持 `input_schema` 和 `output_schema`。
+  - `DatasetVersionReference`：增加 `domain` 与 `annotation_schema_ids` 字段，支持多领域与标注模式关联。
+  - `HardSampleManifest`：扩展 `FeedbackKind`（新增动作纠错、时序纠错、风格纠错、角色纠错、配饰纠错），支持 `domain` 与 `annotation_schema_id`。
+  - `ModelDeploymentEvent`：增加可选 `domain` 字段。
+- 门禁与自动化测试优化：
+  - 增强 `test_repository_contracts.py` 自动化测试套件，覆盖 Draft 2020-12 规范校验、Pydantic 模型校验、UTC RFC 3339 严格校验及历史版本向后兼容性断言。
+  - 配置 pytest 统一加载 `src` 与根目录环境，提升模块解析稳定性。
+  - 保持 `v1.0.0`、`v1.0.1`、`v1.1.0` 发布目录与历史摘要不可变，通过 `--against` 兼容性门禁并在 `release-index.json` 中完成 SHA-256 摘要锁定。
+
+## [1.1.0] - 2026-08-24
+
+- 登记 OCR、Behavior、Fashion 的能力、实体、事件和错误码，发布领域标注模式契约。
+- 扩展难例反馈类型，并为模型包、数据集版本、难例和部署事件增加可选领域元数据。
+- 模型包支持 Paddle、PyTorch 和多文件 bundle 的逐文件摘要清单；旧版 ONNX 单制品载荷继续有效。
+- 保留 `1.0.0`、`1.0.1` 发布目录只读，并通过针对 `1.0.1` 的兼容门禁。
+
 - 统一 `hard-sample-handoff`、`dataset-version-input` 和 `deployment-feedback` 的 `created_at` 为以 `Z` 结尾的 UTC RFC3339 字符串。
 - 更新契约 Schema、有效示例、Pydantic 校验、契约生成器、发布清单摘要和消费方说明；契约边界拒绝 Unix 数值时间，不保留数值兼容路径。
 - 补充跨仓库时间字段说明，明确内部数据库可以使用原生时间类型，但不得将 Unix 数值时间暴露到跨仓载荷。

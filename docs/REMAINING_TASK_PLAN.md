@@ -2,7 +2,7 @@
 
 **适用规范：** `景枢平台总体开发规范.md` 1.3.0
 
-**当前发布：** `@scenara/repository-contracts` `1.0.1`
+**当前发布：** `@scenara/repository-contracts` `1.2.0`
 
 **当前成熟度：** `implemented`
 
@@ -11,6 +11,7 @@
 - `model-package-admission`、`deployment-feedback`、`hard-sample-handoff`、`dataset-version-input` 四条跨仓库契约。
 - Draft 2020-12 Schema、有效示例、发布索引、manifest、SHA-256 摘要和确定性 ZIP。
 - RFC3339 UTC 时间、跨字段摘要一致性、Hard Sample canonical checksum 和 `--against` 兼容门禁。
+- OCR、Behavior、Fashion 与人像布控复核的领域标注模式、反馈类型、可选领域元数据和多制品模型清单。
 
 ## 剩余交付
 
@@ -26,5 +27,6 @@
 ```powershell
 .\.venv\Scripts\python.exe -m pytest -rA
 .\.venv\Scripts\python.exe scripts\repository_contracts.py --check
-.\.venv\Scripts\python.exe scripts\repository_contracts.py --check --bundle repository-contracts-1.0.1.zip
+.\.venv\Scripts\python.exe scripts\repository_contracts.py --check --against contracts/repository/v1.0.1
+.\.venv\Scripts\python.exe scripts\repository_contracts.py --check --bundle repository-contracts-1.2.0.zip
 ```

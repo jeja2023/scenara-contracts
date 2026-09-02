@@ -1,6 +1,6 @@
 schema_version: "1.0"
 package_name: "@scenara/repository-contracts"
-current_release: "1.0.1"
+current_release: "1.2.0"
 compatibility:
   patch: documentation_only
   minor: backward_compatible

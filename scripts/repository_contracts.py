@@ -18,15 +18,17 @@ if str(SOURCE_ROOT) not in sys.path:
 
 from scenara_contracts.repository_v1 import (  # noqa: E402
     DatasetVersionReference,
+    DomainAnnotationSchema,
     FeedbackKind,
     HardSampleItem,
     HardSampleManifest,
+    ModelArtifactFile,
     ModelDeploymentEvent,
     ModelPackageManifest,
     ModelReleaseStatus,
 )
 
-CONTRACT_RELEASE_VERSION = "1.0.1"
+CONTRACT_RELEASE_VERSION = "1.2.0"
 
 CONTRACT_DIR = ROOT / "contracts" / "repository" / f"v{CONTRACT_RELEASE_VERSION}"
 RELEASE_INDEX = ROOT / "contracts" / "repository" / "release-index.json"
@@ -77,6 +79,8 @@ def contract_definitions() -> list[dict[str, Any]]:
                 pipeline_id="portrait.person-detection",
                 pipeline_version="0.1.0",
                 correction={"label": "person", "bbox": [1, 2, 30, 40]},
+                domain="portrait",
+                annotation_schema_id="scenara.portrait.detection.v1",
             ),
         ),
         sha256="0" * 64,
@@ -93,19 +97,29 @@ def contract_definitions() -> list[dict[str, Any]]:
             "consumer_repository_id": "scenara",
             "transport": "immutable_manifest",
             "example": ModelPackageManifest(
-                model_id="scenara.portrait.person-detector",
+                model_id="scenara.behavior.action-recognizer",
                 version="1.0.0",
-                capability="person_detection",
-                adapter="yolo",
-                runtime_model_id="scenara.portrait/person_detector_v1",
+                capability="action_recognition",
+                adapter="paddlevideo",
+                runtime_model_id="scenara.behavior/action_recognizer_v1",
                 sha256=artifact_sha,
                 source_uri=f"oci://registry.example/scenara/person-detector@sha256:{artifact_sha}",
                 license_id="LicenseRef-Proprietary-Approved",
                 model_card=f"https://artifacts.example/model-card.json#sha256={card_sha}",
                 evaluation_evidence=(f"https://artifacts.example/evaluation.json#sha256={evidence_sha}",),
-                vram_mb=4096,
-                regression_samples=("portrait-regression-v1",),
+                vram_mb=6144,
+                regression_samples=("behavior-regression-v1",),
                 production_ready=True,
+                domain="behavior",
+                artifact_format="bundle",
+                artifact_files=(
+                    ModelArtifactFile(
+                        path="models/pptsm.pdparams",
+                        sha256="f" * 64,
+                        size_bytes=1048576,
+                        media_type="application/octet-stream",
+                    ),
+                ),
             ),
         },
         {
@@ -125,7 +139,7 @@ def contract_definitions() -> list[dict[str, Any]]:
             "consumer_repository_id": "scenara-model",
             "transport": "versioned_api",
             "example": DatasetVersionReference(
-                dataset_id="portrait.training",
+                dataset_id="behavior.training",
                 version="2.1.0",
                 manifest_uri=f"https://data.example/manifests/2.1.0.json#sha256={manifest_sha}",
                 manifest_sha256=manifest_sha,
@@ -133,6 +147,35 @@ def contract_definitions() -> list[dict[str, Any]]:
                 authorization_id="grant_training_2026_07",
                 authorized_consumer_repository_ids=("scenara-model",),
                 created_at="2026-08-18T00:00:00Z",
+                domain="behavior",
+                annotation_schema_ids=("scenara.behavior.action.v1",),
+            ),
+        },
+        {
+            "contract_id": "domain-annotation-schema",
+            "payload_type": "DomainAnnotationSchema",
+            "model": DomainAnnotationSchema,
+            "producer_repository_id": "scenara-contracts",
+            "consumer_repository_id": "scenara-data",
+            "transport": "immutable_manifest",
+            "example": DomainAnnotationSchema(
+                schema_id="scenara.portrait.surveillance-review.v1",
+                version="1.0.0",
+                domain="portrait",
+                task_type="surveillance_match_review",
+                supported_media_kinds=("image", "video", "stream"),
+                payload_schema={
+                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "type": "object",
+                    "required": ["alert_id", "triage_reason", "review_outcome"],
+                    "properties": {
+                        "alert_id": {"type": "string", "pattern": "^alt_[A-Za-z0-9]+$"},
+                        "triage_reason": {"type": "string", "minLength": 1, "maxLength": 256},
+                        "review_outcome": {"const": "false_positive"},
+                    },
+                    "additionalProperties": True,
+                },
+                quality_rules=("false_positive_review", "non_empty_triage_reason"),
             ),
         },
         {

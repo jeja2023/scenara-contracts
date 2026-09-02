@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from datetime import datetime
 from enum import StrEnum
+from pathlib import PurePosixPath
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -35,6 +36,11 @@ class FeedbackKind(StrEnum):
     WRONG_ATTRIBUTE = "wrong_attribute"
     WRONG_IDENTITY = "wrong_identity"
     OCR_CORRECTION = "ocr_correction"
+    ACTION_CORRECTION = "action_correction"
+    TEMPORAL_CORRECTION = "temporal_correction"
+    STYLE_CORRECTION = "style_correction"
+    CHARACTER_CORRECTION = "character_correction"
+    ACCESSORY_CORRECTION = "accessory_correction"
 
 
 class ModelReleaseStatus(StrEnum):
@@ -43,6 +49,23 @@ class ModelReleaseStatus(StrEnum):
     APPROVED = "approved"
     ACTIVE = "active"
     RETIRED = "retired"
+
+
+class ModelArtifactFile(ContractModel):
+    path: str = Field(pattern=r"^[^/\\\s][^\\]*$", max_length=512)
+    sha256: str = Field(pattern=SHA256)
+    size_bytes: int = Field(ge=0)
+    media_type: str = Field(min_length=1, max_length=128)
+
+    @field_validator("path")
+    @classmethod
+    def portable_relative_path(cls, value: str) -> str:
+        if "\\" in value:
+            raise ValueError("model artifact paths must use forward slashes")
+        path = PurePosixPath(value)
+        if path.is_absolute() or not path.parts or any(part in {"", ".", ".."} for part in path.parts):
+            raise ValueError("model artifact paths must stay inside the package")
+        return path.as_posix()
 
 
 class ModelPackageManifest(ContractModel):
@@ -60,6 +83,11 @@ class ModelPackageManifest(ContractModel):
     vram_mb: int = Field(ge=0, le=196_608)
     regression_samples: tuple[str, ...] = Field(min_length=1)
     production_ready: bool = False
+    domain: str | None = Field(default=None, pattern=r"^[a-z][a-z0-9_.-]{1,63}$")
+    artifact_format: Literal["onnx", "paddle", "pytorch", "bundle"] = "onnx"
+    artifact_files: tuple[ModelArtifactFile, ...] = Field(default_factory=tuple, max_length=1000)
+    input_schema: str | None = Field(default=None, pattern=IMMUTABLE_URI, max_length=2048)
+    output_schema: str | None = Field(default=None, pattern=IMMUTABLE_URI, max_length=2048)
 
     @field_validator("source_uri", "model_card")
     @classmethod
@@ -87,6 +115,11 @@ class ModelPackageManifest(ContractModel):
         match = re.search(r"(?:@sha256:|#sha256=)([0-9a-f]{64})$", self.source_uri)
         if match is None or match.group(1) != self.sha256:
             raise ValueError("model artifact reference digest must match sha256")
+        paths = [item.path for item in self.artifact_files]
+        if len(paths) != len(set(paths)):
+            raise ValueError("model artifact file paths must be unique")
+        if self.artifact_format == "bundle" and not self.artifact_files:
+            raise ValueError("bundle model packages must enumerate artifact_files")
         return self
 
 
@@ -100,6 +133,8 @@ class DatasetVersionReference(ContractModel):
     authorization_id: str = Field(min_length=1, max_length=256)
     authorized_consumer_repository_ids: tuple[str, ...] = Field(min_length=1, max_length=32)
     created_at: str = Field(pattern=RFC3339_UTC)
+    domain: str | None = Field(default=None, pattern=r"^[a-z][a-z0-9_.-]{1,63}$")
+    annotation_schema_ids: tuple[str, ...] = Field(default_factory=tuple, max_length=100)
 
     @field_validator("created_at")
     @classmethod
@@ -119,6 +154,8 @@ class DatasetVersionReference(ContractModel):
     def matching_manifest_digest(self) -> DatasetVersionReference:
         if not self.manifest_uri.endswith((f"@sha256:{self.manifest_sha256}", f"#sha256={self.manifest_sha256}")):
             raise ValueError("dataset manifest URI digest must match manifest_sha256")
+        if len(self.annotation_schema_ids) != len(set(self.annotation_schema_ids)):
+            raise ValueError("annotation schema identifiers must be unique")
         return self
 
 
@@ -134,6 +171,8 @@ class HardSampleItem(ContractModel):
     correction: dict[str, Any]
     authorized_for_training: bool = True
     deidentified: bool = True
+    domain: str | None = Field(default=None, pattern=r"^[a-z][a-z0-9_.-]{1,63}$")
+    annotation_schema_id: str | None = Field(default=None, min_length=1, max_length=256)
 
 
 class HardSampleManifest(ContractModel):
@@ -173,6 +212,7 @@ class ModelDeploymentEvent(ContractModel):
     operator_id: str
     audit_id: str
     created_at: str = Field(pattern=RFC3339_UTC)
+    domain: str | None = Field(default=None, pattern=r"^[a-z][a-z0-9_.-]{1,63}$")
 
     @field_validator("created_at")
     @classmethod
@@ -180,12 +220,35 @@ class ModelDeploymentEvent(ContractModel):
         return _validate_utc_rfc3339(value)
 
 
+class DomainAnnotationSchema(ContractModel):
+    schema_version: Literal["1.0"] = "1.0"
+    schema_id: str = Field(pattern=r"^[a-z][a-z0-9_.-]{1,255}$")
+    version: str = Field(pattern=r"^\d+\.\d+\.\d+(?:-[a-z0-9.-]+)?$")
+    domain: str = Field(pattern=r"^[a-z][a-z0-9_.-]{1,63}$")
+    task_type: str = Field(pattern=r"^[a-z][a-z0-9_.-]{1,127}$")
+    supported_media_kinds: tuple[Literal["image", "video", "document", "stream"], ...] = Field(min_length=1)
+    payload_schema: dict[str, Any]
+    quality_rules: tuple[str, ...] = Field(default_factory=tuple, max_length=100)
+
+    @model_validator(mode="after")
+    def validate_definition(self) -> DomainAnnotationSchema:
+        if len(self.supported_media_kinds) != len(set(self.supported_media_kinds)):
+            raise ValueError("supported media kinds must be unique")
+        if len(self.quality_rules) != len(set(self.quality_rules)):
+            raise ValueError("quality rules must be unique")
+        if self.payload_schema.get("type") != "object":
+            raise ValueError("annotation payload schema root must be an object")
+        return self
+
+
 __all__ = [
     "DatasetVersionReference",
+    "DomainAnnotationSchema",
     "FeedbackKind",
     "HardSampleItem",
     "HardSampleManifest",
     "ModelDeploymentEvent",
+    "ModelArtifactFile",
     "ModelPackageManifest",
     "ModelReleaseStatus",
 ]
