@@ -1,7 +1,8 @@
-# Scenara Contracts
+# scenara contracts
 
-`scenara-contracts` 是景枢平台能力、实体、数据结构、API、事件、错误码、状态、对象引用、版本与兼容策略的唯一事实来源。其他仓库只消费已发布版本，不得跨仓库导入本仓库源码。
+`scenara-contracts` 是 scenara 平台能力、实体、数据结构、API、事件、错误码、状态、对象引用、版本与兼容策略的唯一事实来源。其他仓库只消费已发布版本，不得跨仓库导入本仓库源码。
 
+- 当前版本：`1.2.1`
 - 当前契约发布：`@scenara/repository-contracts` `1.2.0`
 - 当前成熟度：已实现（implemented）（发布制品与校验已迁入；完整能力/API/事件目录仍在扩充）
 - 责任团队：Scenara 平台架构组
